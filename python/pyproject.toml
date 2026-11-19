@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "btcc-openapi-sdk"
+version = "0.1.0.dev0"
+description = "Synchronous Python client for the BTCC Open API"
+requires-python = ">=3.9"
+dependencies = []
+
+[tool.setuptools]
+packages = ["btcc_sdk"]
