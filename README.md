@@ -16,7 +16,7 @@
 
 - Go 1.22 或以上。
 - 向服务方取得交易地址、用户名、密码、API Key、Secret Key 和公司 ID；需要报价时另取行情地址及行情产品名称。
-- 使用服务方确认的 HTTPS 地址，不要猜测生产地址。HTTP 仅适合测试或可信内网，它不会加密凭证。旧参考资料中的 `90816` 不是有效端口。
+- 请使用服务方提供的 HTTPS 地址，避免以明文发送登录凭证。
 
 模块路径为 [`github.com/btcc-nova/OPENAPI_SDK`](https://github.com/btcc-nova/OPENAPI_SDK)。包名为 `btcc`，小数依赖为 `github.com/shopspring/decimal v1.4.0`。
 
@@ -28,9 +28,7 @@ GitHub 仓库发布后，在已有 `go.mod` 的项目中执行：
 go get github.com/btcc-nova/OPENAPI_SDK@latest
 ```
 
-发布前或调试本地源码时，改用以下步骤。
-
-在 SDK 根目录执行以下命令，新建独立的 `btcc-demo` 项目。目录已存在时请换一个新目录，不要覆盖已有代码。`replace` 告诉 Go 从本机读取 SDK，不是从网上下载。
+不从 GitHub 安装时，可在 SDK 根目录执行以下命令，创建使用本地源码的示例项目：
 
 ```sh
 SDK_DIR="$(pwd)"
@@ -41,7 +39,7 @@ go mod edit -require=github.com/btcc-nova/OPENAPI_SDK@v0.0.0
 go mod edit -replace="github.com/btcc-nova/OPENAPI_SDK=$SDK_DIR"
 ```
 
-将下一节保存为 `btcc-demo` 内的 `main.go`，再运行 `go mod tidy`。已有 Go 项目可只使用两条 `go mod edit` 命令，但 `SDK_DIR` 必须指向 SDK 的绝对路径。
+将下一节的程序保存为示例项目中的 `main.go`。
 
 ## 3. 第一个程序：登录并查询余额
 
@@ -353,38 +351,8 @@ SDK 不记录日志，Session 与登录请求的凭证字段也不会参与 JSON
 | `UpdatePosition` | POST | `/v1/account/updateposition` |
 | `GetQuotePrice` | GET | `/quot/reqOnePrdPrice` |
 
-`KeepAliveResult.ServerTime` 仅在服务端返回 `server_time` 时有值；STG 心跳响应可能只有 `accountid`，此时该字段为 `0`，不能作为当前时间使用。
+服务器未返回时间时，`KeepAliveResult.ServerTime` 为 `0`，不代表当前时间。
 
-- 除登录和行情外，接口都需要同一客户端的 Session。请求与返回类型见 [client.go](client.go) 和 [types.go](types.go)；`internal/wire/` 是内部实现，外部项目不能直接导入。
-- GET 使用查询参数，POST 使用 `application/x-www-form-urlencoded`，不是 JSON。SDK 自动签名：将参数与 `secret_key` 按名称排序，用未 URL 编码的 `key=value` 以 `&` 连接，计算小写 MD5。只发送 `sign`，不发送 `secret_key`。MD5 是现有协议要求，不是新协议的安全建议。
+- 除登录和查询报价外，所有方法都需要由同一个 `Client` 登录获取的 `Session`。
 - 默认每次请求超时 10 秒，可用 `Options.Timeout` 调整；context 或自定义 `HTTPClient` 的更短期限仍会生效。`NewClient` 不发请求。
-- SDK 不跟随重定向，避免泄露凭证或重放交易。自定义 `HTTPClient` 会被浅复制并覆盖重定向策略，原客户端不变。
-- 响应上限为 8 MiB；无 `code`、非法 JSON、成功登录却缺少必要凭证，或成功行情却缺少 `data` 都会报错。
-
-## 9. 验证与维护者工具
-
-在 SDK 根目录运行以下离线检查，不会下单：
-
-```sh
-go test -race -count=1 ./...
-go vet ./...
-go build ./...
-```
-
-本机测试用 `httptest` 模拟服务端，覆盖 10 个接口、签名、小数精度、校验、错误、超时、重定向、响应限制与并发。`*_test.go` 按项目规则仅保留在开发机器，并被 `.gitignore` 排除；新拿到的源码可能没有测试，不能把“无测试文件”当作通过了这些检查。
-
-以下命令仅供持有本机 `uat_test.go` 和授权凭证的维护者使用，会连接 UAT，不是外部开发者的安装步骤：
-
-```sh
-make help
-make test-login
-BTCC_UAT_CHECK=1 go test -run '^TestUATInspect$' -count=1 -v -timeout=90s
-```
-
-`make test-login` 只登录，不查仓位或报价、不下单、不启动心跳；缺少本机测试时会报错。`TestUATInspect` 登录并查询产品、仓位和报价，也不交易。默认 `go test ./...` 跳过线上检查。
-
-UAT 测试直接读取 SDK 根目录的 `uat.env`，不读取跟单机器人配置，也不使用环境变量覆盖凭证。必填键为 `BTCC_UAT_BASE_URL`、`BTCC_UAT_QUOTE_URL`、`BTCC_UAT_USERNAME`、`BTCC_UAT_PASSWORD`、`BTCC_UAT_API_KEY`、`BTCC_UAT_SECRET_KEY`、`BTCC_UAT_COMPANY_ID`。格式为 `KEY=VALUE`，支持双引号，不执行 shell 或展开变量。测试还会检查允许的服务地址。
-
-`uat.env` 必须保持 `600` 权限，`*.env` 已被忽略；不要提交、输出或分享。`make test-login` 的请求超时为 15 秒，失败返回非零退出码，不输出密码、API Key、Secret 或 token。Makefile 优先使用 PATH 中的 Go，再尝试 `/opt/homebrew/bin/go`；可通过 `make test-login GO="$(command -v go)"` 显式指定。
-
-上线前仍需服务方确认：实际地址与凭证格式、产品状态、交易数量和杠杆限制、平仓方向，以及止盈止损零值的含义。编译与离线测试不能代替目标环境验证。
+- SDK 不跟随重定向，单次响应上限为 8 MiB。

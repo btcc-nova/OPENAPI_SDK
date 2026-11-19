@@ -16,7 +16,7 @@
 
 - Go 1.22 이상.
 - 서비스 제공자가 발급한 거래 기본 URL, 사용자 이름, 비밀번호, API Key, Secret Key, 회사 ID. 시세를 조회하려면 별도의 시세 기본 URL과 시세 종목명도 필요합니다.
-- 제공자가 확인한 HTTPS URL을 사용하세요. 운영 주소를 추측하지 마세요. HTTP는 테스트 또는 신뢰할 수 있는 내부 네트워크용이며 인증 정보를 암호화하지 않습니다. 예전 참고 자료의 `90816`은 유효한 포트가 아닙니다.
+- 인증 정보가 평문으로 전송되지 않도록 서비스 제공자가 지정한 HTTPS 주소를 사용하세요.
 
 모듈 경로는 [`github.com/btcc-nova/OPENAPI_SDK`](https://github.com/btcc-nova/OPENAPI_SDK)입니다. 패키지 이름은 `btcc`이며 소수 처리에는 `github.com/shopspring/decimal v1.4.0`을 사용합니다.
 
@@ -28,9 +28,7 @@ GitHub 저장소가 공개되면 `go.mod`가 있는 프로젝트에서 다음 �
 go get github.com/btcc-nova/OPENAPI_SDK@latest
 ```
 
-공개 전이거나 로컬 소스를 테스트할 때는 대신 아래 단계를 따르세요.
-
-SDK 루트에서 다음 명령을 실행해 별도의 `btcc-demo` 프로젝트를 만듭니다. 같은 디렉터리가 있으면 새 이름을 사용하고 기존 코드를 덮어쓰지 마세요. `replace`는 SDK를 다운로드하지 않고 로컬에서 읽도록 Go에 알려줍니다.
+GitHub에서 설치하지 않고 로컬 소스를 사용하려면 SDK 루트에서 다음 명령으로 예제 프로젝트를 만드세요.
 
 ```sh
 SDK_DIR="$(pwd)"
@@ -41,7 +39,7 @@ go mod edit -require=github.com/btcc-nova/OPENAPI_SDK@v0.0.0
 go mod edit -replace="github.com/btcc-nova/OPENAPI_SDK=$SDK_DIR"
 ```
 
-다음 예제를 `btcc-demo` 안의 `main.go`로 저장한 뒤 `go mod tidy`를 실행하세요. 기존 Go 프로젝트에서는 `SDK_DIR`을 SDK의 절대 경로로 설정하고 두 개의 `go mod edit` 명령만 사용할 수 있습니다.
+다음 절의 프로그램을 예제 프로젝트의 `main.go`로 저장하세요.
 
 ## 3. 첫 프로그램: 로그인하고 잔액 조회
 
@@ -353,38 +351,8 @@ SDK 자체는 로그를 남기지 않습니다. Session과 로그인 요청의 �
 | `UpdatePosition` | POST | `/v1/account/updateposition` |
 | `GetQuotePrice` | GET | `/quot/reqOnePrdPrice` |
 
-`KeepAliveResult.ServerTime`은 서버가 `server_time`을 반환할 때만 설정됩니다. STG 하트비트 응답에는 `accountid`만 있을 수 있으며, 이 경우 값은 현재 시각이 아닌 `0`입니다.
+서버가 시간을 반환하지 않으면 `KeepAliveResult.ServerTime`은 `0`입니다. 이 값을 현재 시각으로 사용하지 마세요.
 
-- 로그인과 시세 조회 외에는 같은 클라이언트의 Session이 필요합니다. 요청과 반환 타입은 [client.go](client.go), [types.go](types.go)를 참고하세요. `internal/wire/`는 내부 구현이며 외부 프로젝트에서 직접 가져올 수 없습니다.
-- GET은 쿼리 매개변수를, POST는 JSON이 아닌 `application/x-www-form-urlencoded`를 사용합니다. 서명은 자동입니다. `secret_key`를 포함한 매개변수를 이름순으로 정렬하고 URL 인코딩 전의 `key=value`를 `&`로 연결한 뒤 소문자 MD5를 계산합니다. `sign`만 전송하고 `secret_key`는 보내지 않습니다. MD5는 기존 프로토콜 요구 사항이며 새 설계에 대한 권장이 아닙니다.
+- 로그인과 시세 조회를 제외한 모든 메서드에는 같은 `Client`에서 로그인해 받은 `Session`이 필요합니다.
 - 요청별 기본 제한 시간은 10초이며 `Options.Timeout`으로 바꿀 수 있습니다. context 또는 사용자 지정 `HTTPClient`의 더 짧은 제한도 적용됩니다. `NewClient`는 요청을 보내지 않습니다.
-- 인증 정보 유출과 거래 재전송을 막기 위해 리디렉션을 따르지 않습니다. 사용자 지정 `HTTPClient`는 얕게 복사한 뒤 복사본의 리디렉션 정책을 덮어쓰며 원본은 변경하지 않습니다.
-- 응답 상한은 8 MiB입니다. `code` 누락, 잘못된 JSON, 성공한 로그인에 필수 인증 정보가 없는 경우, 성공한 시세 응답에 `data`가 없는 경우는 오류입니다.
-
-## 9. 검증과 관리자 도구
-
-SDK 루트에서 아래 오프라인 검사를 실행하세요. 주문하지 않습니다.
-
-```sh
-go test -race -count=1 ./...
-go vet ./...
-go build ./...
-```
-
-로컬 테스트는 `httptest`로 서버를 모의하여 10개 API, 서명, 소수 정밀도, 입력 검증, 오류, 시간 초과, 리디렉션, 응답 제한, 동시 실행을 검사합니다. 프로젝트 규칙에 따라 `*_test.go`는 개발 기기에만 보관하고 `.gitignore`로 제외합니다. 새로 받은 소스에는 테스트가 없을 수 있으며, “테스트 파일 없음”은 이 검사를 통과했다는 뜻이 아닙니다.
-
-다음 명령은 로컬 `uat_test.go`와 허가된 인증 정보를 가진 관리자 전용입니다. UAT에 연결하며 외부 개발자용 설치 절차가 아닙니다.
-
-```sh
-make help
-make test-login
-BTCC_UAT_CHECK=1 go test -run '^TestUATInspect$' -count=1 -v -timeout=90s
-```
-
-`make test-login`은 로그인만 하고 포지션·시세 조회, 주문, 하트비트는 실행하지 않습니다. 로컬 테스트가 없으면 실패합니다. `TestUATInspect`는 로그인 후 종목, 포지션, 시세를 조회하지만 거래하지 않습니다. 일반 `go test ./...`는 온라인 검사를 건너뜁니다.
-
-UAT 테스트는 SDK 루트의 `uat.env`를 직접 읽습니다. 카피 트레이딩 봇 설정이나 환경 변수로 덮어쓴 인증 정보는 사용하지 않습니다. 필수 키는 `BTCC_UAT_BASE_URL`, `BTCC_UAT_QUOTE_URL`, `BTCC_UAT_USERNAME`, `BTCC_UAT_PASSWORD`, `BTCC_UAT_API_KEY`, `BTCC_UAT_SECRET_KEY`, `BTCC_UAT_COMPANY_ID`입니다. `KEY=VALUE` 형식이며 큰따옴표를 지원하지만 shell 실행이나 변수 확장은 하지 않습니다. 허용된 서비스 URL도 검사합니다.
-
-`uat.env` 권한은 `600`으로 유지하세요. `*.env`는 제외되어 있으며 커밋, 출력, 공유하면 안 됩니다. `make test-login`의 요청 제한 시간은 15초이고 실패하면 0이 아닌 종료 코드를 반환하며 비밀번호, API Key, Secret, token을 출력하지 않습니다. Makefile은 PATH의 Go를 우선 사용하고 다음으로 `/opt/homebrew/bin/go`를 시도합니다. `make test-login GO="$(command -v go)"`로 명시할 수 있습니다.
-
-운영 적용 전 실제 URL, 인증 정보 형식, 종목 상태, 수량·레버리지 제한, 청산 방향, 손절·익절 0 값의 의미를 제공자에게 확인하세요. 컴파일과 오프라인 테스트는 대상 환경 검증을 대신할 수 없습니다.
+- SDK는 리디렉션을 따르지 않으며 응답 하나의 크기를 8 MiB로 제한합니다.

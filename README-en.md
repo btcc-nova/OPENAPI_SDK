@@ -16,7 +16,7 @@ Start with the read-only example before adding trading. You do not need to place
 
 - Go 1.22 or later.
 - Obtain the trading base URL, username, password, API Key, Secret Key and company ID from the service provider. For quotes, also obtain the quote base URL and quote symbol name.
-- Use provider-confirmed HTTPS URLs; do not guess production addresses. HTTP is for testing or trusted networks only and does not encrypt credentials. The port `90816` in older reference material is invalid.
+- Use the HTTPS URLs supplied by your provider to avoid sending credentials in plain text.
 
 The module path is [`github.com/btcc-nova/OPENAPI_SDK`](https://github.com/btcc-nova/OPENAPI_SDK). The package name is `btcc`; decimal values use `github.com/shopspring/decimal v1.4.0`.
 
@@ -28,9 +28,7 @@ Once the GitHub repository is published, run this in a project with a `go.mod` f
 go get github.com/btcc-nova/OPENAPI_SDK@latest
 ```
 
-Before publication, or to test a local checkout, use the following steps instead.
-
-Run these commands from the SDK root to create a separate `btcc-demo` project. If that directory exists, choose a new directory rather than overwriting code. `replace` tells Go to read the SDK from your machine instead of downloading it.
+To use a local copy instead of installing from GitHub, run these commands from the SDK root to create a demo project:
 
 ```sh
 SDK_DIR="$(pwd)"
@@ -41,7 +39,7 @@ go mod edit -require=github.com/btcc-nova/OPENAPI_SDK@v0.0.0
 go mod edit -replace="github.com/btcc-nova/OPENAPI_SDK=$SDK_DIR"
 ```
 
-Save the next example as `main.go` inside `btcc-demo`, then run `go mod tidy`. For an existing Go project, use just the two `go mod edit` commands, with `SDK_DIR` set to the SDK's absolute path.
+Save the program in the next section as `main.go` in your demo project.
 
 ## 3. First program: sign in and read your balance
 
@@ -353,38 +351,8 @@ The SDK does not log. Credential fields in Session and login requests are exclud
 | `UpdatePosition` | POST | `/v1/account/updateposition` |
 | `GetQuotePrice` | GET | `/quot/reqOnePrdPrice` |
 
-`KeepAliveResult.ServerTime` is populated only when the server returns `server_time`. STG heartbeat responses may include only `accountid`; in that case this field is `0`, not the current time.
+If the server omits the time, `KeepAliveResult.ServerTime` is `0`, not the current time.
 
-- All calls except login and quotes require a Session from the same client. See [client.go](client.go) and [types.go](types.go) for request and result types. `internal/wire/` is internal and cannot be imported by external projects.
-- GET uses query parameters. POST uses `application/x-www-form-urlencoded`, not JSON. Signing is automatic: sort parameters including `secret_key` by name, join unescaped `key=value` pairs with `&`, then calculate lowercase MD5. Only `sign` is sent, not `secret_key`. MD5 is required by the existing protocol, not recommended for new designs.
+- Every method except login and quote lookup requires a `Session` from the same `Client`.
 - Each request defaults to a 10-second timeout, configurable with `Options.Timeout`. Shorter context or custom `HTTPClient` deadlines still apply. `NewClient` sends no request.
-- Redirects are not followed, preventing credential leakage and trade replay. A custom `HTTPClient` is shallow-copied and its redirect policy overridden; the original client is unchanged.
-- Responses are limited to 8 MiB. Missing `code`, invalid JSON, a successful login missing required credentials, or a successful quote missing `data` all cause errors.
-
-## 9. Verification and maintainer tools
-
-Run these offline checks from the SDK root. They do not place orders:
-
-```sh
-go test -race -count=1 ./...
-go vet ./...
-go build ./...
-```
-
-Local tests use `httptest` to simulate the server and cover all 10 endpoints, signatures, decimal precision, validation, errors, timeouts, redirects, response limits and concurrency. Project rules keep `*_test.go` on development machines only, excluded by `.gitignore`. A fresh source copy may have no tests; “no test files” is not proof that these checks passed.
-
-The commands below are only for maintainers who have local `uat_test.go` and authorized credentials. They connect to UAT and are not external developer installation steps:
-
-```sh
-make help
-make test-login
-BTCC_UAT_CHECK=1 go test -run '^TestUATInspect$' -count=1 -v -timeout=90s
-```
-
-`make test-login` only signs in: no position or quote queries, orders or heartbeat. It fails if the local test is missing. `TestUATInspect` signs in and reads products, positions and quotes without trading. Normal `go test ./...` skips live checks.
-
-UAT tests read `uat.env` directly from the SDK root, not copy-trading bot configuration or credential overrides from environment variables. Required keys: `BTCC_UAT_BASE_URL`, `BTCC_UAT_QUOTE_URL`, `BTCC_UAT_USERNAME`, `BTCC_UAT_PASSWORD`, `BTCC_UAT_API_KEY`, `BTCC_UAT_SECRET_KEY`, `BTCC_UAT_COMPANY_ID`. Use `KEY=VALUE`; double-quoted values are supported, with no shell execution or variable expansion. Tests also check allowed service URLs.
-
-Keep `uat.env` permissions at `600`; `*.env` is ignored. Never commit, print or share it. `make test-login` uses a 15-second request timeout, exits nonzero on failure and does not print passwords, API Keys, Secrets or tokens. The Makefile uses Go from PATH first, then `/opt/homebrew/bin/go`. Override explicitly with `make test-login GO="$(command -v go)"`.
-
-Before going live, confirm service URLs, credential formats, product statuses, volume and leverage limits, closing direction and the meaning of zero stop values with the provider. Compilation and offline tests cannot replace validation in the target environment.
+- The SDK does not follow redirects and limits each response to 8 MiB.

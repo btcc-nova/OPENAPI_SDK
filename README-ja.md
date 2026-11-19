@@ -16,7 +16,7 @@
 
 - Go 1.22 以降。
 - サービス提供者から取得した取引ベース URL、ユーザー名、パスワード、API Key、Secret Key、会社 ID。価格照会には別途、価格配信のベース URL と銘柄名が必要です。
-- 提供者が確認した HTTPS URL を使用してください。本番 URL を推測しないでください。HTTP はテストや信頼できる内部ネットワーク向けで、認証情報を暗号化しません。古い参考資料のポート `90816` は無効です。
+- 認証情報を平文で送信しないよう、サービス提供者が指定した HTTPS URL を使用してください。
 
 モジュールパスは [`github.com/btcc-nova/OPENAPI_SDK`](https://github.com/btcc-nova/OPENAPI_SDK) です。パッケージ名は `btcc`、小数処理には `github.com/shopspring/decimal v1.4.0` を使用します。
 
@@ -28,9 +28,7 @@ GitHub リポジトリの公開後は、`go.mod` があるプロジェクトで�
 go get github.com/btcc-nova/OPENAPI_SDK@latest
 ```
 
-公開前やローカルのソースを試す場合は、代わりに以下の手順を使用してください。
-
-SDK のルートで以下を実行し、独立した `btcc-demo` プロジェクトを作成します。同名のディレクトリがある場合は別の新しい名前を使い、既存コードを上書きしないでください。`replace` は、ダウンロードではなくローカルから SDK を読み込む設定です。
+GitHub からインストールせずローカルのソースを使う場合は、SDK のルートで以下を実行してサンプルプロジェクトを作成します。
 
 ```sh
 SDK_DIR="$(pwd)"
@@ -41,7 +39,7 @@ go mod edit -require=github.com/btcc-nova/OPENAPI_SDK@v0.0.0
 go mod edit -replace="github.com/btcc-nova/OPENAPI_SDK=$SDK_DIR"
 ```
 
-次のサンプルを `btcc-demo` 内の `main.go` として保存してから、`go mod tidy` を実行します。既存の Go プロジェクトでは、`SDK_DIR` を SDK の絶対パスに設定し、2 つの `go mod edit` だけを使えます。
+次のセクションのプログラムをサンプルプロジェクトの `main.go` に保存してください。
 
 ## 3. 最初のプログラム：ログインして残高を確認する
 
@@ -353,38 +351,8 @@ SDK 自体はログを記録しません。Session とログイン要求の認�
 | `UpdatePosition` | POST | `/v1/account/updateposition` |
 | `GetQuotePrice` | GET | `/quot/reqOnePrdPrice` |
 
-`KeepAliveResult.ServerTime` はサーバーが `server_time` を返した場合のみ設定されます。STG のハートビート応答は `accountid` のみの場合があり、その場合は `0` です。現在時刻として使用しないでください。
+サーバーが時刻を返さない場合、`KeepAliveResult.ServerTime` は `0` になります。現在時刻ではありません。
 
-- ログインと価格照会以外は、同じクライアントの Session が必要です。要求と戻り値の型は [client.go](client.go)、[types.go](types.go) を参照してください。`internal/wire/` は内部実装で、外部プロジェクトから直接インポートできません。
-- GET はクエリパラメーター、POST は JSON ではなく `application/x-www-form-urlencoded` を使います。署名は自動です。`secret_key` を含むパラメーターを名前順に並べ、URL エンコード前の `key=value` を `&` で連結し、小文字の MD5 を計算します。送信するのは `sign` のみで、`secret_key` は送信しません。MD5 は既存プロトコルへの対応であり、新規設計への推奨ではありません。
+- ログインと価格照会を除き、同じ `Client` でログインして取得した `Session` が必要です。
 - 各要求の既定タイムアウトは 10 秒で、`Options.Timeout` で変更できます。context や独自 `HTTPClient` に短い期限があれば、その期限も有効です。`NewClient` は要求を送りません。
-- 認証情報の漏えいと取引の再送を防ぐため、リダイレクトには追従しません。独自 `HTTPClient` は浅くコピーされ、そのコピーのリダイレクト方針が上書きされます。元のクライアントは変わりません。
-- 応答の上限は 8 MiB です。`code` の欠落、不正な JSON、成功ログインで必要な認証情報がない場合、成功した価格照会で `data` がない場合はエラーです。
-
-## 9. 検証と管理者向けツール
-
-SDK のルートで以下のオフライン検査を実行します。注文は行いません。
-
-```sh
-go test -race -count=1 ./...
-go vet ./...
-go build ./...
-```
-
-ローカルテストは `httptest` でサーバーを模擬し、全 10 API、署名、小数精度、入力検証、エラー、タイムアウト、リダイレクト、応答制限、並行処理を検査します。プロジェクトのルールにより `*_test.go` は開発機だけに保存され、`.gitignore` で除外されます。新しく取得したソースにテストがない場合、「テストファイルなし」はこれらの検査に合格したことを意味しません。
-
-以下はローカルの `uat_test.go` と許可された認証情報を持つ管理者向けです。UAT に接続するため、外部開発者の導入手順ではありません。
-
-```sh
-make help
-make test-login
-BTCC_UAT_CHECK=1 go test -run '^TestUATInspect$' -count=1 -v -timeout=90s
-```
-
-`make test-login` はログインのみで、ポジション・価格の照会、注文、ハートビートは行いません。ローカルテストがなければ失敗します。`TestUATInspect` はログイン後に銘柄、ポジション、価格を照会しますが、取引しません。通常の `go test ./...` はオンライン検査をスキップします。
-
-UAT テストは SDK ルートの `uat.env` を直接読みます。コピートレードボットの設定や、環境変数による認証情報の上書きは使いません。必須キーは `BTCC_UAT_BASE_URL`、`BTCC_UAT_QUOTE_URL`、`BTCC_UAT_USERNAME`、`BTCC_UAT_PASSWORD`、`BTCC_UAT_API_KEY`、`BTCC_UAT_SECRET_KEY`、`BTCC_UAT_COMPANY_ID` です。形式は `KEY=VALUE` で、二重引用符に対応します。shell 実行や変数展開はしません。許可されたサービス URL も検査します。
-
-`uat.env` の権限は `600` を維持してください。`*.env` は除外済みです。コミット、表示、共有は禁止です。`make test-login` の要求タイムアウトは 15 秒で、失敗時は非ゼロ終了し、パスワード、API Key、Secret、token は表示しません。Makefile は PATH の Go を優先し、次に `/opt/homebrew/bin/go` を試します。`make test-login GO="$(command -v go)"` で明示指定できます。
-
-本番利用前に、実際の URL、認証情報の形式、銘柄の状態、数量・レバレッジ制限、決済方向、損切り・利確のゼロ値の意味を提供者に確認してください。コンパイルやオフラインテストは対象環境での検証の代わりにはなりません。
+- SDK はリダイレクトに追従しません。応答サイズの上限は 1 回につき 8 MiB です。
