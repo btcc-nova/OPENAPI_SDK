@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	btcc "github.com/btcc-nova/OPENAPI_SDK"
+	btcc "github.com/btcc-nova/OPENAPI_SDK/go"
 )
 
 func main() {
