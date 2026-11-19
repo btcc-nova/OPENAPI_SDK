@@ -1,4 +1,4 @@
-module example.com/btcc/open-api-sdk
+module github.com/btcc-nova/OPENAPI_SDK
 
 go 1.22
 

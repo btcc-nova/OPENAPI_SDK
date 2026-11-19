@@ -14,13 +14,21 @@ Start with the read-only example before adding trading. You do not need to place
 
 ## 1. Before you start
 
-- Go 1.22 or later and a local copy of this SDK source.
+- Go 1.22 or later.
 - Obtain the trading base URL, username, password, API Key, Secret Key and company ID from the service provider. For quotes, also obtain the quote base URL and quote symbol name.
 - Use provider-confirmed HTTPS URLs; do not guess production addresses. HTTP is for testing or trusted networks only and does not encrypt credentials. The port `90816` in older reference material is invalid.
 
-The module path is still `example.com/btcc/open-api-sdk`. The SDK is not published, so direct `go get` installation is unavailable. The instructions below use local source rather than an assumed public download URL. The package name is `btcc`; decimal values use `github.com/shopspring/decimal v1.4.0`.
+The module path is [`github.com/btcc-nova/OPENAPI_SDK`](https://github.com/btcc-nova/OPENAPI_SDK). The package name is `btcc`; decimal values use `github.com/shopspring/decimal v1.4.0`.
 
 ## 2. Install in your project
+
+Once the GitHub repository is published, run this in a project with a `go.mod` file:
+
+```sh
+go get github.com/btcc-nova/OPENAPI_SDK@latest
+```
+
+Before publication, or to test a local checkout, use the following steps instead.
 
 Run these commands from the SDK root to create a separate `btcc-demo` project. If that directory exists, choose a new directory rather than overwriting code. `replace` tells Go to read the SDK from your machine instead of downloading it.
 
@@ -29,11 +37,11 @@ SDK_DIR="$(pwd)"
 mkdir btcc-demo
 cd btcc-demo
 go mod init local/btcc-demo
-go mod edit -require=example.com/btcc/open-api-sdk@v0.0.0
-go mod edit -replace="example.com/btcc/open-api-sdk=$SDK_DIR"
+go mod edit -require=github.com/btcc-nova/OPENAPI_SDK@v0.0.0
+go mod edit -replace="github.com/btcc-nova/OPENAPI_SDK=$SDK_DIR"
 ```
 
-Save the next example as `main.go` inside `btcc-demo`, then run `go mod tidy`. For an existing Go project, use just the two `go mod edit` commands, with `SDK_DIR` set to the SDK's absolute path. Before publication, maintainers must replace the module path consistently in `go.mod`, source and examples.
+Save the next example as `main.go` inside `btcc-demo`, then run `go mod tidy`. For an existing Go project, use just the two `go mod edit` commands, with `SDK_DIR` set to the SDK's absolute path.
 
 ## 3. First program: sign in and read your balance
 
@@ -62,7 +70,7 @@ import (
     "strconv"
     "time"
 
-    btcc "example.com/btcc/open-api-sdk"
+    btcc "github.com/btcc-nova/OPENAPI_SDK"
 )
 
 func main() {
@@ -131,7 +139,7 @@ import (
     "context"
     "fmt"
 
-    btcc "example.com/btcc/open-api-sdk"
+    btcc "github.com/btcc-nova/OPENAPI_SDK"
 )
 
 func inspect(ctx context.Context, client *btcc.Client, session *btcc.Session) error {
@@ -196,7 +204,7 @@ package main
 import (
     "context"
 
-    btcc "example.com/btcc/open-api-sdk"
+    btcc "github.com/btcc-nova/OPENAPI_SDK"
     "github.com/shopspring/decimal"
 )
 
@@ -279,7 +287,7 @@ import (
     "context"
     "time"
 
-    btcc "example.com/btcc/open-api-sdk"
+    btcc "github.com/btcc-nova/OPENAPI_SDK"
 )
 
 func keepSessionAlive(ctx context.Context, client *btcc.Client, session *btcc.Session) error {
@@ -303,7 +311,7 @@ import (
     "errors"
     "fmt"
 
-    btcc "example.com/btcc/open-api-sdk"
+    btcc "github.com/btcc-nova/OPENAPI_SDK"
 )
 
 func errorSummary(err error) string {

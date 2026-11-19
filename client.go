@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"time"
 
-	"example.com/btcc/open-api-sdk/internal/wire"
+	"github.com/btcc-nova/OPENAPI_SDK/internal/wire"
 )
 
 // Options 配置交易与行情地址以及 HTTP 超时。

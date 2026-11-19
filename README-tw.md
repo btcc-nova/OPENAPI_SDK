@@ -14,13 +14,21 @@
 
 ## 1. 開始前準備什麼
 
-- Go 1.22 或以上，以及這份 SDK 的本機原始碼。
+- Go 1.22 或以上。
 - 向服務方取得交易網址、使用者名稱、密碼、API Key、Secret Key 和公司 ID；需要報價時另取行情網址及行情商品名稱。
 - 使用服務方確認的 HTTPS 網址，不要猜測正式環境網址。HTTP 僅適合測試或可信內網，它不會加密憑證。舊參考資料中的 `90816` 不是有效連接埠。
 
-目前模組路徑仍是 `example.com/btcc/open-api-sdk`，尚未發布，不能直接 `go get`。以下使用本機原始碼串接，不假設已有公開下載網址。套件名稱為 `btcc`，小數相依套件為 `github.com/shopspring/decimal v1.4.0`。
+模組路徑為 [`github.com/btcc-nova/OPENAPI_SDK`](https://github.com/btcc-nova/OPENAPI_SDK)。套件名稱為 `btcc`，小數相依套件為 `github.com/shopspring/decimal v1.4.0`。
 
 ## 2. 在自己的專案中安裝
+
+GitHub 倉庫發布後，在已有 `go.mod` 的專案中執行：
+
+```sh
+go get github.com/btcc-nova/OPENAPI_SDK@latest
+```
+
+發布前或測試本機原始碼時，改用以下步驟。
 
 在 SDK 根目錄執行以下指令，建立獨立的 `btcc-demo` 專案。目錄已存在時請換一個新目錄，不要覆蓋既有程式。`replace` 告訴 Go 從本機讀取 SDK，而非從網路下載。
 
@@ -29,11 +37,11 @@ SDK_DIR="$(pwd)"
 mkdir btcc-demo
 cd btcc-demo
 go mod init local/btcc-demo
-go mod edit -require=example.com/btcc/open-api-sdk@v0.0.0
-go mod edit -replace="example.com/btcc/open-api-sdk=$SDK_DIR"
+go mod edit -require=github.com/btcc-nova/OPENAPI_SDK@v0.0.0
+go mod edit -replace="github.com/btcc-nova/OPENAPI_SDK=$SDK_DIR"
 ```
 
-將下一節儲存為 `btcc-demo` 內的 `main.go`，再執行 `go mod tidy`。既有 Go 專案可只使用兩條 `go mod edit` 指令，但 `SDK_DIR` 必須指向 SDK 的絕對路徑。正式發布前，維護者需要同步替換 `go.mod`、原始碼和範例中的模組路徑。
+將下一節儲存為 `btcc-demo` 內的 `main.go`，再執行 `go mod tidy`。既有 Go 專案可只使用兩條 `go mod edit` 指令，但 `SDK_DIR` 必須指向 SDK 的絕對路徑。
 
 ## 3. 第一個程式：登入並查詢餘額
 
@@ -62,7 +70,7 @@ import (
     "strconv"
     "time"
 
-    btcc "example.com/btcc/open-api-sdk"
+    btcc "github.com/btcc-nova/OPENAPI_SDK"
 )
 
 func main() {
@@ -131,7 +139,7 @@ import (
     "context"
     "fmt"
 
-    btcc "example.com/btcc/open-api-sdk"
+    btcc "github.com/btcc-nova/OPENAPI_SDK"
 )
 
 func inspect(ctx context.Context, client *btcc.Client, session *btcc.Session) error {
@@ -196,7 +204,7 @@ package main
 import (
     "context"
 
-    btcc "example.com/btcc/open-api-sdk"
+    btcc "github.com/btcc-nova/OPENAPI_SDK"
     "github.com/shopspring/decimal"
 )
 
@@ -279,7 +287,7 @@ import (
     "context"
     "time"
 
-    btcc "example.com/btcc/open-api-sdk"
+    btcc "github.com/btcc-nova/OPENAPI_SDK"
 )
 
 func keepSessionAlive(ctx context.Context, client *btcc.Client, session *btcc.Session) error {
@@ -303,7 +311,7 @@ import (
     "errors"
     "fmt"
 
-    btcc "example.com/btcc/open-api-sdk"
+    btcc "github.com/btcc-nova/OPENAPI_SDK"
 )
 
 func errorSummary(err error) string {
