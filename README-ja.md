@@ -35,6 +35,4 @@ python3 -m pip install ./python
 python3 python/examples/login.py
 ```
 
-`login()` はクライアントに紐付いた `Session` を返します。これを `keep_alive`、`get_symbol_list`、`get_account_group`、`get_account`、`get_position_list` に渡します。価格照会にログインは不要です。`Client(base_url, quote_url=...)` を設定して `get_quote_price(symbol)` を呼び出します。
-
-取引には `open_position`、`close_position`、`update_position` を使用します。価格や数量は `float` ではなく文字列か `Decimal` で指定します。応答はサーバーのフィールド名を保持する辞書またはリストで、金額は `Decimal` です。業務エラーは `APIError.code`、HTTP ステータスは `HTTPError.status_code` で確認できます。自動再試行や自動ハートビートはありません。取引がタイムアウトした場合は、再注文の前にポジションを確認してください。
+[利用ガイド](python/README-ja.md)

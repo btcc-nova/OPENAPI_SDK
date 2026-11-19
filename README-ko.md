@@ -35,6 +35,4 @@ python3 -m pip install ./python
 python3 python/examples/login.py
 ```
 
-`login()`은 해당 클라이언트에 연결된 `Session`을 반환합니다. 이를 `keep_alive`, `get_symbol_list`, `get_account_group`, `get_account`, `get_position_list`에 전달합니다. 시세 조회에는 로그인이 필요 없습니다. `Client(base_url, quote_url=...)`을 설정하고 `get_quote_price(symbol)`을 호출하세요.
-
-거래에는 `open_position`, `close_position`, `update_position`을 사용합니다. 가격과 수량은 `float` 대신 문자열이나 `Decimal`로 전달하세요. 응답은 서버 필드 이름을 유지한 딕셔너리 또는 리스트이며 금액은 `Decimal`입니다. 업무 오류는 `APIError.code`, HTTP 상태는 `HTTPError.status_code`로 확인합니다. 재시도나 하트비트는 자동 실행되지 않습니다. 거래 시간이 초과되면 다시 주문하기 전에 포지션을 확인하세요.
+[사용 안내](python/README-ko.md)

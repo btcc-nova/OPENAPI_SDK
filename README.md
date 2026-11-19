@@ -35,6 +35,4 @@ python3 -m pip install ./python
 python3 python/examples/login.py
 ```
 
-`login()` 返回绑定当前客户端的 `Session`。将它传给 `keep_alive`、`get_symbol_list`、`get_account_group`、`get_account` 或 `get_position_list`。报价不需要登录：设置 `Client(base_url, quote_url=...)` 后调用 `get_quote_price(symbol)`。
-
-交易方法为 `open_position`、`close_position`、`update_position`。价格和数量使用字符串或 `Decimal`，不要传 `float`。响应使用服务端字段名的字典或列表；金额按 `Decimal` 返回。`APIError.code` 是业务错误码，`HTTPError.status_code` 是 HTTP 状态码。SDK 不自动重试或启动心跳；交易超时请先查仓位，不要直接重送。
+[使用指南](python/README.md)

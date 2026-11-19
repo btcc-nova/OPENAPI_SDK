@@ -35,6 +35,4 @@ Set `BTCC_BASE_URL`, `BTCC_USER_NAME`, `BTCC_PASSWORD`, `BTCC_API_KEY` and `BTCC
 python3 python/examples/login.py
 ```
 
-`login()` returns a `Session` bound to the client. Pass it to `keep_alive`, `get_symbol_list`, `get_account_group`, `get_account` or `get_position_list`. Quotes do not require login: configure `Client(base_url, quote_url=...)` and call `get_quote_price(symbol)`.
-
-Trading methods are `open_position`, `close_position` and `update_position`. Supply prices and quantities as strings or `Decimal`, not `float`. Responses are dictionaries or lists using the original field names; monetary values are `Decimal`. `APIError.code` contains the service error code; `HTTPError.status_code` contains the HTTP status. There are no automatic retries or heartbeats. After a trade timeout, check the position before sending another order.
+[Usage guide](python/README-en.md)
